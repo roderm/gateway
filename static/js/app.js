@@ -50,6 +50,16 @@ const App = {
   ORIGIN: window.location.origin,
 
   /**
+   * Maximum number of allowed ping failures.
+   */
+  MAX_PING_FAILURES: 3,
+
+  /**
+   * Interval at which to ping to check for connectivity.
+   */
+  PING_INTERVAL: 20 * 1000,
+
+  /**
    * Start Things Gateway app.
    */
   init: function() {
@@ -84,6 +94,7 @@ const App = {
     this.connectivityOverlay = document.getElementById('connectivity-scrim');
     this.pingerInterval = null;
     this.pingerLastStatus = null;
+    this.failedPings = 0;
     this.startPinger();
 
     this.gatewayModel = new GatewayModel();
@@ -131,33 +142,43 @@ const App = {
   },
 
   startPinger() {
-    fetch(`${this.ORIGIN}/ping`, {headers: {Accept: 'application/json'}})
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error('Bad return status');
-        }
+    fetch(
+      `${this.ORIGIN}/ping`,
+      {
+        headers: {
+          Accept: 'application/json',
+        },
+      }
+    ).then((res) => {
+      if (!res.ok) {
+        throw new Error(`Bad return status: ${res.status}`);
+      }
 
-        if (this.pingerLastStatus === 'offline') {
-          window.location.reload();
-        } else {
-          this.pingerLastStatus = 'online';
-          this.connectivityOverlay.classList.add('hidden');
-          this.messageArea.classList.remove('disconnected');
+      if (this.pingerLastStatus === 'offline') {
+        window.location.reload();
+      } else {
+        this.failedPings = 0;
+        this.pingerLastStatus = 'online';
+        this.connectivityOverlay.classList.add('hidden');
+        this.messageArea.classList.remove('disconnected');
 
-          if (this.messageArea.innerText === 'Gateway Unreachable') {
-            this.hidePersistentMessage();
-          }
+        if (this.messageArea.innerText === 'Gateway Unreachable') {
+          this.hidePersistentMessage();
         }
-      })
-      .catch(() => {
+      }
+    }).catch((e) => {
+      console.error('Gateway unreachable:', e);
+      if (++this.failedPings >= this.MAX_PING_FAILURES) {
         this.connectivityOverlay.classList.remove('hidden');
         this.messageArea.classList.add('disconnected');
         this.showPersistentMessage('Gateway Unreachable');
         this.pingerLastStatus = 'offline';
-      });
+      }
+    });
 
     if (!this.pingerInterval) {
-      this.pingerInterval = setInterval(this.startPinger.bind(this), 30 * 1000);
+      this.pingerInterval =
+        setInterval(this.startPinger.bind(this), this.PING_INTERVAL);
     }
   },
 

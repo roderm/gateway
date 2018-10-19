@@ -55,6 +55,9 @@ class PropertyProxy extends Property {
     if (propertyDict.hasOwnProperty('maximum')) {
       this.maximum = propertyDict.maximum;
     }
+    if (propertyDict.hasOwnProperty('enum')) {
+      this.enum = propertyDict.enum;
+    }
     while (this.propertyChangedPromises.length > 0) {
       const deferredChange = this.propertyChangedPromises.pop();
       deferredChange.resolve(propertyDict.value);
@@ -69,10 +72,6 @@ class PropertyProxy extends Property {
    */
   setValue(value) {
     return new Promise((resolve, reject) => {
-      console.log('PropertyProxy: setProperty property:', this.name,
-                  'for:', this.device.id,
-                  'to value:', value);
-
       this.device.adapter.sendMsg(
         Constants.SET_PROPERTY, {
           deviceId: this.device.id,
