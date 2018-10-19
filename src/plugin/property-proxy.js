@@ -46,6 +46,9 @@ class PropertyProxy extends Property {
   doPropertyChanged(propertyDict) {
     this.propertyDict = Object.assign({}, propertyDict);
     this.setCachedValue(propertyDict.value);
+    if(propertyDict.hasOwnProperty('enum')){
+      this.enum = propertyDict.enum;
+    }
     if (propertyDict.hasOwnProperty('minimum')) {
       this.minimum = propertyDict.minimum;
     }
